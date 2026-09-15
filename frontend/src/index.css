@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* ===== Warm Institutional Palette ===== */
+  /* Base colors from your Coolors palette */
+  --bg-primary:     #edede9;   /* page background */
+  --bg-secondary:   #e3d5ca;   /* top bar, sidebar */
+  --bg-card:        #f5ebe0;   /* cards, tables */
+  --border:         #d6ccc2;   /* divider lines */
+
+  /* Accent (derived from #d5bdaf, warm caramel) */
+  --accent:         #c97b3f;
+  --accent-hover:   #e6a05c;
+
+  /* Text (dark browns for contrast on beige) */
+  --text-primary:   #3d2f24;
+  --text-secondary: #6b5a4a;
+  --text-muted:     #9c8a76;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root { min-height: 100vh; }
+
+/* Leaflet — light theme adjustment */
+.leaflet-container { background: #e3d5ca !important; }
+.leaflet-tile { filter: brightness(0.98) contrast(1.02) saturate(0.9); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
