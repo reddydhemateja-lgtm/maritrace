@@ -1,9 +1,18 @@
 const BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:8001";
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  // Only send Content-Type when we're actually sending a JSON body
+  const method = (options?.method || "GET").toUpperCase();
+  const headers: Record<string, string> = {
+    ...((options?.headers as Record<string, string>) || {}),
+  };
+  if (method !== "GET" && method !== "HEAD") {
+    headers["Content-Type"] = "application/json";
+  }
+
   const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
     ...options,
+    headers,
   });
   if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
   return res.json();
