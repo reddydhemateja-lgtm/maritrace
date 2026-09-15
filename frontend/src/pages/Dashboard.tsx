@@ -1,38 +1,22 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, AlertTriangle, MapPin } from "lucide-react";
-import { api } from "../api/client";
+import { Loader2, AlertTriangle, RefreshCw } from "lucide-react";
+import { useSpills } from "../hooks/useSpills";
 import type { Spill } from "../api/types";
 import MapView from "../components/MapView";
 
-// Indian region slugs — used to filter spills
 const INDIA_REGIONS = ["india_west", "india_east", "india_south"];
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [spills, setSpills] = useState<Spill[]>([]);
-  const [regions, setRegions] = useState<Record<string, any>>({});
   const [regionFilter, setRegionFilter] = useState<string>("");
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetch = async () => {
-      try {
-        const res: any = await api.recentSpills();
-        setSpills(res.spills || []);
-        setRegions(res.regions || {});
-        setError(null);
-      } catch (e: any) {
-        setError(e.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetch();
-    const t = setInterval(fetch, 60000);
-    return () => clearInterval(t);
-  }, []);
+  // Uses app-level cache — instant render on navigation back
+  const { data: spills, regions, loading, error, lastFetch } = useSpills();
+
+  const refresh = () => {
+    window.location.reload();
+  };
 
   // -------- India-specific subset --------
   const indiaSpills = spills.filter((s) =>
@@ -45,14 +29,16 @@ export default function Dashboard() {
     indiaRegionCounts[r] = (indiaRegionCounts[r] || 0) + 1;
   }
 
-  // -------- All-region filtered set (existing) --------
+  // -------- All-region filtered set --------
   const filtered = regionFilter
     ? spills.filter((s) => s.region === regionFilter)
     : spills;
 
-  // -------- Helper to build map data from a spill list --------
+  // -------- Map data builders --------
   const buildMapData = (list: Spill[], maxPolys = 60) => {
-    const usable = list.filter((s) => s.geometry?.coordinates).slice(0, maxPolys);
+    const usable = list
+      .filter((s) => s.geometry?.coordinates)
+      .slice(0, maxPolys);
 
     const polygons = usable.map((s) => {
       const isArchive = s.source === "historical";
@@ -111,7 +97,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      {/* ============ HEADER ============ */}
+      {/* Header */}
       <div className="flex items-end justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold">Mission Dashboard</h1>
@@ -119,8 +105,22 @@ export default function Dashboard() {
             Oil spill detections from Cerulean · click any spill to investigate
           </p>
         </div>
+        <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
+          <span>
+            Updated{" "}
+            {lastFetch ? new Date(lastFetch).toLocaleTimeString() : "—"}
+          </span>
+          <button
+            onClick={refresh}
+            className="p-1.5 rounded hover:bg-[var(--bg-card)]"
+            title="Force refresh"
+          >
+            <RefreshCw size={12} />
+          </button>
+        </div>
       </div>
 
+      {/* Loading — only show when nothing is cached yet */}
       {loading && spills.length === 0 && (
         <div className="flex flex-col items-center justify-center p-12 gap-3 bg-[var(--bg-card)] rounded-lg border border-[var(--border)]">
           <Loader2 className="h-6 w-6 animate-spin text-[var(--accent)]" />
@@ -130,6 +130,7 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Error */}
       {error && (
         <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
           <AlertTriangle className="text-red-400 mt-0.5" size={18} />
@@ -142,16 +143,15 @@ export default function Dashboard() {
         </div>
       )}
 
-      {!loading && spills.length > 0 && (
+      {/* Data loaded */}
+      {spills.length > 0 && (
         <>
           {/* ============ INDIA SECTION ============ */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <span className="text-2xl">🇮🇳</span>
               <div>
-                <h2 className="text-xl font-bold">
-                  Spills Detected Near India
-                </h2>
+                <h2 className="text-xl font-bold">Spills Detected Near India</h2>
                 <p className="text-xs text-[var(--text-secondary)] mt-0.5">
                   Arabian Sea · Bay of Bengal · Southern Indian Ocean
                 </p>
@@ -161,10 +161,6 @@ export default function Dashboard() {
 
             {indiaSpills.length === 0 ? (
               <div className="p-8 bg-[var(--bg-card)] border border-[var(--border)] rounded-lg text-center">
-                <MapPin
-                  className="mx-auto mb-2 text-[var(--text-muted)]"
-                  size={28}
-                />
                 <p className="text-sm text-[var(--text-secondary)]">
                   No Indian spills in cache right now.
                 </p>
@@ -199,7 +195,7 @@ export default function Dashboard() {
                   />
                 </div>
 
-                {/* India map — zoomed to subcontinent */}
+                {/* India map */}
                 <MapView
                   polygons={indiaMap.polygons}
                   markers={indiaMap.markers}
@@ -211,7 +207,7 @@ export default function Dashboard() {
 
                 {/* Recent Indian detections */}
                 <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-lg overflow-hidden">
-                  <div className="px-4 py-3 border-b border-[var(--border)] font-semibold text-sm flex items-center justify-between">
+                  <div className="px-4 py-3 border-b border-[var(--border)] font-semibold text-sm flex items-center justify-between flex-wrap gap-2">
                     <span>
                       Recent Indian Detections · click any row to investigate
                     </span>
@@ -290,7 +286,7 @@ export default function Dashboard() {
 
           {/* ============ ALL REGIONS SECTION ============ */}
           <div className="space-y-4 pt-4 border-t border-[var(--border)]">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <span className="text-2xl">🌍</span>
               <div>
                 <h2 className="text-xl font-bold">All Monitored Regions</h2>
