@@ -24,7 +24,7 @@ backend/.env
 maritrace.db
 
 # ===== ML Models (too large for Git) =====
-models/*.pth
+
 models/*.pt
 models/*.h5
 models/*.onnx
