@@ -51,9 +51,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# CORS — read allowed origins from environment variable (comma-separated).
+# Falls back to localhost origins for development.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=[o.strip() for o in config.CORS_ORIGINS.split(",") if o.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -64,7 +66,7 @@ app.include_router(incidents.router, prefix="/api/incidents", tags=["Incidents"]
 app.include_router(satellite.router, prefix="/api/satellite", tags=["Satellite"])
 app.include_router(ais.router, prefix="/api/ais", tags=["AIS"])
 app.include_router(drift.router, prefix="/api/drift", tags=["Drift"])
-app.include_router(vessels.router, prefix="/api/vessels", tags=["Vessels"])   # ← must be present
+app.include_router(vessels.router, prefix="/api/vessels", tags=["Vessels"])
 app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
 app.include_router(investigation.router, prefix="/api/investigation", tags=["Investigation"])
 

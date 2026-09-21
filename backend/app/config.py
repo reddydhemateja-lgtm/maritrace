@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings
 from typing import Optional
 
+
 class Settings(BaseSettings):
     APP_NAME: str = "MARITRACE API"
     APP_VERSION: str = "1.0.0"
@@ -16,6 +17,9 @@ class Settings(BaseSettings):
     AIS_API_KEY: str = ""
     AIS_API_URL: str = ""
 
+    # CORS — comma-separated list of allowed origins
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173,http://localhost:5174"
+
     # Ocean / Weather – Open-Meteo
     OCEAN_API_URL: str = "https://marine-api.open-meteo.com/v1/marine"
     OCEAN_API_KEY: str = "free"
@@ -28,14 +32,13 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "sqlite:///./maritrace.db"
 
-    # Frontend API URL (used in some places, now defined)
-    vite_api_url: Optional[str] = None  # 👈 added this
+    # Frontend URL (optional)
+    vite_api_url: Optional[str] = None
 
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
-        # If you want to allow extra fields, you can set:
-        # extra = "allow"
-        # But it's better to define them explicitly.
+        extra = "ignore"
+
 
 config = Settings()
