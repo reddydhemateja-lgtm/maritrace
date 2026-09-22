@@ -52,14 +52,11 @@ export const api = {
     const res = await fetch(`${API_BASE}/incidents/${id}`);
     return handleResponse<any>(res);
   },
-
-  // Vessels
   async getVessels(incidentId?: string) {
-    const url = incidentId ? `${API_BASE}/vessels?incident_id=${incidentId}` : `${API_BASE}/vessels`;
-    const res = await fetch(url);
-    return handleResponse<any[]>(res);
-  },
-
+  const url = incidentId ? `${API_BASE}/vessels/?incident_id=${incidentId}` : `${API_BASE}/vessels/`;
+  const res = await fetch(url);
+  return handleResponse<any[]>(res);
+},
   // Drift
   async getDriftConditions(lat: number, lon: number) {
     const params = new URLSearchParams({ lat: String(lat), lon: String(lon) });
@@ -99,11 +96,11 @@ export const api = {
   },
 
   // AIS – get nearby vessels
-  async getNearbyVessels(lat: number, lon: number, radius: number = 50) {
-    const params = new URLSearchParams({ lat: String(lat), lon: String(lon), radius: String(radius) });
-    const res = await fetch(`${API_BASE}/ais/nearby?${params}`);
-    return handleResponse<any>(res);
-  },
+ async getNearbyVessels(lat: number, lon: number, radius: number = 50) {
+  // Backend has /ais/vessels, not /ais/nearby
+  const res = await fetch(`${API_BASE}/ais/vessels/`);
+  return handleResponse<any>(res);
+},
 
   // Vessel ranking (for investigation)
   async rankVessels(vessels: any[]) {

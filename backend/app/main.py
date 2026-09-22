@@ -84,14 +84,16 @@ app.include_router(investigation.router, prefix="/api/investigation", tags=["Inv
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "mode": "live" if config.LIVE_MODE else "demo"}
-
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
+@app.websocket("/api/realtime/ws")
+async def realtime_websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         await websocket.send_json({"type": "init", "status": "connected"})
         while True:
             await asyncio.sleep(5)
-            await manager.broadcast({"type": "ping", "timestamp": datetime.now().isoformat()})
+            await manager.broadcast({
+                "type": "ping",
+                "timestamp": datetime.now().isoformat()
+            })
     except WebSocketDisconnect:
         manager.disconnect(websocket)
