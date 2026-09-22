@@ -1,9 +1,16 @@
 // frontend/src/services/api.ts
 
-// Use environment variable or fallback
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-const WS_BASE = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws';
+// In development, connect to local backend.
+// In production (Netlify), connect to Render backend.
+const IS_DEV = import.meta.env.DEV;
 
+const API_BASE = IS_DEV
+  ? 'http://localhost:8000/api'
+  : 'https://maritrace.onrender.com/api';
+
+const WS_BASE = IS_DEV
+  ? 'ws://localhost:8000/ws'
+  : 'wss://maritrace.onrender.com/ws';
 // Helper to handle fetch responses
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
