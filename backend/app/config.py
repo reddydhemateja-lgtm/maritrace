@@ -26,8 +26,8 @@ class Settings(BaseSettings):
     WEATHER_API_URL: str = "https://api.open-meteo.com/v1/forecast"
     WEATHER_API_KEY: str = "free"
 
-    # Model
-    MODEL_PATH: str = "models/best_model.pth"
+       # Model
+    MODEL_PATH: str = "../models/best_model.pth"
 
     # Database
     DATABASE_URL: str = "sqlite:///./maritrace.db"
