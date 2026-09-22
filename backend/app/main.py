@@ -24,13 +24,46 @@ class ConnectionManager:
             self.active_connections.remove(websocket)
 
     async def broadcast(self, message: dict):
+        dead = []
         for connection in self.active_connections:
             try:
                 await connection.send_json(message)
-            except:
-                pass
+            except Exception:
+                dead.append(connection)
+        for connection in dead:
+            self.disconnect(connection)
 
 manager = ConnectionManager()
+
+# ===== WebSocket Origin Whitelist =====
+# Starlette blocks cross-origin WebSockets by default (403).
+# These are the origins we allow to connect via WebSocket.
+ALLOWED_WS_ORIGINS = [
+    "https://martirace2.netlify.app",
+    "https://martirace.netlify.app",
+    "https://maritrace.netlify.app",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:5174",
+]
+
+# Also allow anything in CORS_ORIGINS env var
+try:
+    for origin in config.CORS_ORIGINS.split(","):
+        o = origin.strip()
+        if o and o not in ALLOWED_WS_ORIGINS:
+            ALLOWED_WS_ORIGINS.append(o)
+except Exception:
+    pass
+
+print(f"[Main] Allowed WebSocket origins: {ALLOWED_WS_ORIGINS}")
+
+def _ws_origin_ok(websocket: WebSocket) -> bool:
+    """Check if the WebSocket origin is allowed. Empty origin (native clients) is OK."""
+    origin = websocket.headers.get("origin", "")
+    if not origin:
+        return True  # native clients (curl, wscat) don't send origin
+    return origin in ALLOWED_WS_ORIGINS
 
 # ===== Lifespan =====
 @asynccontextmanager
@@ -62,8 +95,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — read allowed origins from environment variable (comma-separated).
-# Falls back to localhost origins for development.
+# CORS for HTTP
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in config.CORS_ORIGINS.split(",") if o.strip()],
@@ -72,7 +104,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ All routers must be mounted – including vessels
+# Routers
 app.include_router(incidents.router, prefix="/api/incidents", tags=["Incidents"])
 app.include_router(satellite.router, prefix="/api/satellite", tags=["Satellite"])
 app.include_router(ais.router, prefix="/api/ais", tags=["AIS"])
@@ -84,8 +116,18 @@ app.include_router(investigation.router, prefix="/api/investigation", tags=["Inv
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "mode": "live" if config.LIVE_MODE else "demo"}
-@app.websocket("/api/realtime/ws")
-async def realtime_websocket_endpoint(websocket: WebSocket):
+
+
+# ===== WebSocket: /ws =====
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    origin = websocket.headers.get("origin", "")
+    if not _ws_origin_ok(websocket):
+        print(f"[WS /ws] Rejected origin: {origin}")
+        await websocket.close(code=1008)  # policy violation
+        return
+
+    print(f"[WS /ws] Accepted connection from origin: {origin or '(none)'}")
     await manager.connect(websocket)
     try:
         await websocket.send_json({"type": "init", "status": "connected"})
@@ -97,3 +139,34 @@ async def realtime_websocket_endpoint(websocket: WebSocket):
             })
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+        print(f"[WS /ws] Client disconnected")
+    except Exception as e:
+        manager.disconnect(websocket)
+        print(f"[WS /ws] Error: {e}")
+
+
+# ===== WebSocket: /api/realtime/ws =====
+@app.websocket("/api/realtime/ws")
+async def realtime_websocket_endpoint(websocket: WebSocket):
+    origin = websocket.headers.get("origin", "")
+    if not _ws_origin_ok(websocket):
+        print(f"[WS /api/realtime/ws] Rejected origin: {origin}")
+        await websocket.close(code=1008)
+        return
+
+    print(f"[WS /api/realtime/ws] Accepted connection from origin: {origin or '(none)'}")
+    await manager.connect(websocket)
+    try:
+        await websocket.send_json({"type": "init", "status": "connected"})
+        while True:
+            await asyncio.sleep(5)
+            await manager.broadcast({
+                "type": "ping",
+                "timestamp": datetime.now().isoformat()
+            })
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        print(f"[WS /api/realtime/ws] Client disconnected")
+    except Exception as e:
+        manager.disconnect(websocket)
+        print(f"[WS /api/realtime/ws] Error: {e}")
