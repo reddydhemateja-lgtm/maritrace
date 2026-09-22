@@ -36,6 +36,23 @@ manager = ConnectionManager()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("[Main] Starting up...")
+    
+    # Create database tables if they don't exist
+    try:
+        from .database.database import Base, engine
+        from .database import seed  # triggers model registration
+        Base.metadata.create_all(bind=engine)
+        print("[Main] Database tables created/verified")
+        
+        # Optionally seed demo data (only inserts if tables are empty)
+        from .database.seed import seed_all
+        from .database.database import SessionLocal
+        with SessionLocal() as db:
+            seed_all(db)
+        print("[Main] Seed data loaded")
+    except Exception as e:
+        print(f"[Main] DB setup warning: {e}")
+    
     if config.LIVE_MODE:
         ais_service = AISService()
         asyncio.create_task(ais_service.listen_for_vessels())
@@ -43,7 +60,6 @@ async def lifespan(app: FastAPI):
         print("[Main] Scheduler started (live mode)")
     yield
     print("[Main] Shutting down...")
-
 # ===== FastAPI App =====
 app = FastAPI(
     title="MARITRACE API",
