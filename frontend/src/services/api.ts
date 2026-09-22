@@ -97,7 +97,6 @@ export const api = {
 
   // AIS – get nearby vessels
  async getNearbyVessels(lat: number, lon: number, radius: number = 50) {
-  // Backend has /ais/vessels, not /ais/nearby
   const res = await fetch(`${API_BASE}/ais/vessels/`);
   return handleResponse<any>(res);
 },

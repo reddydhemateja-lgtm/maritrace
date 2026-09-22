@@ -154,15 +154,15 @@ const msg: any = lastMessage;
             <option value="MR-2010-MUMBAI">🌊 Mumbai Oil Spill 2010</option>
             <option value="MR-2017-ENNORE">🌊 Ennore Oil Spill 2017</option>
             <option value="MR-2025-KERALA">🌊 Kerala Oil Spill 2025</option>
-            <option value="MR-2026-0147">📍 Mumbai (Demo)</option>
-            <option value="MR-2026-0189">📍 Goa (Demo)</option>
-            <option value="MR-2026-0213">📍 Kochi (Demo)</option>
-            <option value="MR-2026-0220">📍 Chennai (Demo)</option>
-            <option value="MR-2026-0235">📍 Visakhapatnam (Demo)</option>
-            <option value="MR-2026-0248">📍 Puri (Demo)</option>
-            <option value="MR-2026-0255">📍 Digha (Demo)</option>
-            <option value="MR-2026-0262">📍 Andaman (Demo)</option>
-            <option value="MR-2026-0275">📍 Lakshadweep (Demo)</option>
+            <option value="MR-2026-0147">📍 Mumbai </option>
+            <option value="MR-2026-0189">📍 Goa </option>
+            <option value="MR-2026-0213">📍 Kochi </option>
+            <option value="MR-2026-0220">📍 Chennai </option>
+            <option value="MR-2026-0235">📍 Visakhapatnam </option>
+            <option value="MR-2026-0248">📍 Puri </option>
+            <option value="MR-2026-0255">📍 Digha </option>
+            <option value="MR-2026-0262">📍 Andaman </option>
+            <option value="MR-2026-0275">📍 Lakshadweep </option>
           </select>
 
           {/* Live status indicator */}
