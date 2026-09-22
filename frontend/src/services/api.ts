@@ -12,6 +12,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
     try {
       const errorData = await response.json();
       if (errorData.message) errorMessage = errorData.message;
+      else if (errorData.detail) errorMessage = errorData.detail;
     } catch (_) {
       // Ignore JSON parsing errors
     }
@@ -21,17 +22,16 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export const api = {
-  // Health check
+  // Health check — increased timeout for Render cold start
   async health() {
     try {
       const res = await fetch(`${API_BASE}/health`, {
-        // Add a timeout to avoid long waits
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(60000),  // 60 seconds — enough for Render free tier cold start
       });
       return handleResponse<{ status: string; mode: string }>(res);
     } catch (error) {
       console.error('Health check failed:', error);
-      throw new Error('Could not reach backend. Please make sure the server is running on port 8000.');
+      throw new Error('Backend not responding. If this is a fresh request, wait up to 60 seconds and try again.');
     }
   },
 
@@ -91,7 +91,7 @@ export const api = {
     return handleResponse<any>(res);
   },
 
-  // AIS – get nearby vessels (using your AIS API key)
+  // AIS – get nearby vessels
   async getNearbyVessels(lat: number, lon: number, radius: number = 50) {
     const params = new URLSearchParams({ lat: String(lat), lon: String(lon), radius: String(radius) });
     const res = await fetch(`${API_BASE}/ais/nearby?${params}`);
