@@ -24,5 +24,8 @@ COPY . .
 # Render provides $PORT; default to 8000 for local
 ENV PORT=8000
 EXPOSE 8000
+# Debug: verify files before starting
+RUN echo "=== Files in /app ===" && ls -la /app && \
+    echo "=== app dir ===" && ls -la /app/app
 
-CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT}
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
