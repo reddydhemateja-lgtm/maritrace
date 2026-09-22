@@ -46,8 +46,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const topCandidate = vessels[0];
 
   // WebSocket for live updates
-  const { isConnected, lastMessage } = useWebSocket('ws://localhost:8000/ws');
-
+ const WS_URL = (import.meta.env.VITE_WS_URL as string) || 'wss://maritrace.onrender.com/ws';
+const { isConnected, lastMessage } = useWebSocket(WS_URL);
   // Handle WebSocket messages
   useEffect(() => {
     if (lastMessage) {

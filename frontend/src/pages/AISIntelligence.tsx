@@ -35,8 +35,8 @@ export const AISIntelligence: React.FC<AISIntelligenceProps> = ({
   const [evidenceModalOpen, setEvidenceModalOpen] = useState(false);
   const currentVessel = selectedVessel || vessels[0];
 
-  const { isConnected, lastMessage } = useWebSocket('ws://localhost:8000/ws');
-
+ const WS_URL = (import.meta.env.VITE_WS_URL as string) || 'wss://maritrace.onrender.com/ws';
+const { isConnected, lastMessage } = useWebSocket(WS_URL);
   useEffect(() => {
     if (lastMessage) {
       try {
