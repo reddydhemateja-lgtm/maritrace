@@ -40,7 +40,7 @@ const { isConnected, lastMessage } = useWebSocket(WS_URL);
   useEffect(() => {
     if (lastMessage) {
       try {
-        const msg = JSON.parse(lastMessage);
+        const msg: any = lastMessage;
         if (msg.type === 'vessel_update') {
           setVessels(prev =>
             prev.map(v =>

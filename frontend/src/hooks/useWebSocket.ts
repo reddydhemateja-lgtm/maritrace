@@ -1,25 +1,27 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
-type WebSocketMessage = {
+export type WebSocketMessage = {
   type: string;
-  payload: any;
+  payload?: any;
+  data?: any;
+  [key: string]: any;
 };
 
 export function useWebSocket(url: string, onMessage?: (data: WebSocketMessage) => void) {
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws';
-  
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
+
     const ws = new WebSocket(url);
     wsRef.current = ws;
 
     ws.onopen = () => {
       setIsConnected(true);
-      console.log('[WebSocket] Connected');
+      console.log('[WebSocket] Connected to', url);
     };
 
     ws.onmessage = (event) => {
@@ -35,7 +37,6 @@ export function useWebSocket(url: string, onMessage?: (data: WebSocketMessage) =
     ws.onclose = () => {
       setIsConnected(false);
       console.log('[WebSocket] Disconnected, reconnecting...');
-      // Attempt reconnect after 3 seconds
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = setTimeout(connect, 3000);
     };

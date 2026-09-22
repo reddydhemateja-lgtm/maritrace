@@ -52,7 +52,7 @@ const { isConnected, lastMessage } = useWebSocket(WS_URL);
   useEffect(() => {
     if (lastMessage) {
       try {
-        const msg = JSON.parse(lastMessage);
+const msg: any = lastMessage;
         if (msg.type === 'new_spill') {
           setAlerts(prev => [
             { id: msg.incident.id, message: `New spill detected at ${msg.incident.location}`, time: new Date().toLocaleTimeString() },
