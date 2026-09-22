@@ -83,7 +83,117 @@ class ScoringService:
             scored.append(vessel)
 
         return scored
+    def compute_vessel_score(
+        self,
+        vessel,
+        origin_lat: float,
+        origin_lon: float,
+        origin_time=None,
+        drift_path=None,
+    ) -> Dict[str, float]:
+        """
+        Score a single vessel (SQLAlchemy ORM object or dict).
+        Returns the 5-factor breakdown: spatial, temporal, trajectory, drift, anomaly, total.
+        """
+        # Extract fields (works with both ORM objects and dicts)
+        def get(obj, name, default=None):
+            if isinstance(obj, dict):
+                return obj.get(name, default)
+            return getattr(obj, name, default)
 
+        # ---- 1. Spatial (30%) ----
+        dist = get(vessel, "closest_approach_distance_km")
+        if dist is None:
+            # try to compute from trajectory
+            traj = get(vessel, "trajectory") or []
+            if traj:
+                try:
+                    first = traj[0]
+                    dist = self._haversine(origin_lat, origin_lon, first.get('lat', 0), first.get('lon', 0))
+                except Exception:
+                    dist = 50.0
+            else:
+                dist = 50.0
+        spatial = max(0.0, 100.0 * math.exp(-float(dist) / 20.0))
+
+        # ---- 2. Temporal (25%) ----
+        temporal = 50.0
+        ct = get(vessel, "closest_approach_time")
+        if ct and origin_time:
+            try:
+                if isinstance(ct, str):
+                    ct_dt = datetime.fromisoformat(ct.replace('Z', '+00:00'))
+                else:
+                    ct_dt = ct
+                if ct_dt.tzinfo is None:
+                    from datetime import timezone
+                    ct_dt = ct_dt.replace(tzinfo=timezone.utc)
+                if origin_time.tzinfo is None:
+                    from datetime import timezone
+                    ot = origin_time.replace(tzinfo=timezone.utc)
+                else:
+                    ot = origin_time
+                diff_minutes = abs((ct_dt - ot).total_seconds() / 60.0)
+                temporal = max(0.0, 100.0 * math.exp(- (diff_minutes ** 2) / (2 * 30 ** 2)))
+            except Exception:
+                temporal = 50.0
+
+        # ---- 3. Trajectory (25%) ----
+        trajectory = 70.0
+        course = get(vessel, "course_deg")
+        if course is not None and drift_path and len(drift_path) >= 2:
+            # compute bearing of drift path
+            try:
+                lat1, lon1 = drift_path[0]
+                lat2, lon2 = drift_path[-1]
+                drift_bearing = self._bearing(lat1, lon1, lat2, lon2)
+                angle_diff = abs(course - drift_bearing)
+                angle_diff = min(angle_diff, 360 - angle_diff)
+                trajectory = max(0.0, 100.0 * (1 - angle_diff / 180.0))
+            except Exception:
+                pass
+
+        # ---- 4. Drift (10%) ----
+        drift = 80.0 if get(vessel, "is_candidate", False) else 50.0
+
+        # ---- 5. Anomaly (10%) ----
+        anomalies = get(vessel, "anomalies_detected") or []
+        anomaly = max(0.0, 100.0 - len(anomalies) * 5.0)
+
+        # ---- Total ----
+        total = (
+            self.WEIGHTS["spatial"] * spatial
+            + self.WEIGHTS["temporal"] * temporal
+            + self.WEIGHTS["trajectory"] * trajectory
+            + self.WEIGHTS["drift"] * drift
+            + self.WEIGHTS["anomaly"] * anomaly
+        )
+
+        return {
+            "spatial": round(spatial, 1),
+            "temporal": round(temporal, 1),
+            "trajectory": round(trajectory, 1),
+            "drift": round(drift, 1),
+            "anomaly": round(anomaly, 1),
+            "total": round(total, 1),
+        }
+
+    def _haversine(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        R = 6371.0
+        dlat = math.radians(lat2 - lat1)
+        dlon = math.radians(lon2 - lon1)
+        a = (math.sin(dlat/2)**2
+             + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2)
+        return 2 * R * math.asin(math.sqrt(a))
+
+    def _bearing(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        lat1_r = math.radians(lat1)
+        lat2_r = math.radians(lat2)
+        dlon_r = math.radians(lon2 - lon1)
+        x = math.sin(dlon_r) * math.cos(lat2_r)
+        y = (math.cos(lat1_r) * math.sin(lat2_r)
+             - math.sin(lat1_r) * math.cos(lat2_r) * math.cos(dlon_r))
+        return (math.degrees(math.atan2(x, y)) + 360) % 360
     def _get_category(self, score: float) -> str:
         if score >= 85:
             return "High Association"
